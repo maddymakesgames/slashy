@@ -1,5 +1,5 @@
 [workspace]
 members = [
     "slashy",
-    "slashy-macros"
+    "slashy_macros"
 ]
