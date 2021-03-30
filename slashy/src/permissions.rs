@@ -7,7 +7,7 @@ use serenity::{
 
 use crate::commands::CommandResult;
 
-use serenity_command_handler_macros::permissions_check;
+use slashy_macros::permissions_check;
 
 /// A permissions check
 pub type PermissionsCheck =

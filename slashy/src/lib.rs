@@ -135,12 +135,12 @@ mod tests;
 ///     ]
 /// }
 ///```
-pub use serenity_command_handler_macros::command;
+pub use slashy_macros::command;
 
 /// Denotes a function that is used in a command.
 ///
 /// Functions must take a [CommandContext](crate::framework::CommandContext) and return a [CommandResult](crate::commands::CommandResult).
-pub use serenity_command_handler_macros::subcommand;
+pub use slashy_macros::subcommand;
 
 /// Denotes a function that is used to check permissions before running a command.
-pub use serenity_command_handler_macros::permissions_check;
+pub use slashy_macros::permissions_check;
