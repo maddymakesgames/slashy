@@ -106,8 +106,8 @@ impl ToTokens for CommandInput {
         let struct_name = format_ident!("{}_COMMAND", name.to_string().to_uppercase());
         let cmd_name = format!("{}", name);
         tokens.append_all(quote! {
-            use ::serenity_command_handler::commands::{Command, CommandArguments, ArgumentChoice, CommandArgumentsTree};
-            use ::serenity_command_handler::framework::CommandInit;
+            use ::slashy::commands::{Command, CommandArguments, ArgumentChoice, CommandArgumentsTree};
+            use ::slashy::framework::CommandInit;
             use std::iter::FromIterator;
             pub struct #struct_name;
             impl CommandInit for #struct_name {

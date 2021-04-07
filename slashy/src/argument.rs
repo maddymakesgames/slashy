@@ -235,7 +235,7 @@ impl Argument {
 
     /// Splits a raw string into argument words respecting quotation marks
     /// ```
-    /// # use serenity_command_handler::argument::Argument;
+    /// # use slashy::argument::Argument;
     /// let string = r#"this is a string "with quotes in it""#;
     ///
     /// let args = Argument::get_arg_strings(string);

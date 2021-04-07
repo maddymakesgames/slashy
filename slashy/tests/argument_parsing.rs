@@ -1,5 +1,5 @@
 use serenity::model::{id::UserId, interactions::Interaction};
-use serenity_command_handler::{
+use slashy::{
     argument::Argument,
     commands::{ArgumentChoice, CommandArguments, CommandArgumentsTree, CommandResult},
     framework::{CommandContext, CommandSource},

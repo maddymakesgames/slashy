@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use serenity::FutureExt;
-use serenity_command_handler::{
+use slashy::{
     argument::Argument,
     command,
     commands::CommandResult,

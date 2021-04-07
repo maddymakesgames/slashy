@@ -103,7 +103,7 @@ pub fn format_subcommand(func: SubCommandFunc, args: SubCommandArgs) -> proc_mac
                     {
                     }
                     #[cfg(not(test))]
-                    assert_type_eq_all::<CommandResult, ::serenity_command_handler::commands::CommandResult>();
+                    assert_type_eq_all::<CommandResult, ::slashy::commands::CommandResult>();
                 };
                 const _: fn() = || {
                     trait TypeEq {
@@ -119,7 +119,7 @@ pub fn format_subcommand(func: SubCommandFunc, args: SubCommandArgs) -> proc_mac
                     {
                     }
                     #[cfg(not(test))]
-                    assert_type_eq_all::<&CommandContext, &::serenity_command_handler::framework::CommandContext>();
+                    assert_type_eq_all::<&CommandContext, &::slashy::framework::CommandContext>();
                 };
 
                 #permmissions_runner

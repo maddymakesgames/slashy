@@ -54,9 +54,9 @@ mod tests;
 /// ## Examples
 /// `stats get|set [user]`
 /// ```
-/// # use serenity_command_handler_macros::*;
-/// # use serenity_command_handler::commands::*;
-/// # use serenity_command_handler::framework::*;
+/// # use slashy_macros::*;
+/// # use slashy::commands::*;
+/// # use slashy::framework::*;
 /// # #[subcommand]
 /// # pub async fn points(_ctx: &CommandContext) -> CommandResult {Ok(())}
 /// # #[subcommand]
@@ -82,9 +82,9 @@ mod tests;
 ///
 /// `add a b`
 /// ```
-/// # use serenity_command_handler_macros::*;
-/// # use serenity_command_handler::commands::*;
-/// # use serenity_command_handler::framework::*;
+/// # use slashy_macros::*;
+/// # use slashy::commands::*;
+/// # use slashy::framework::*;
 /// # #[subcommand]
 /// # pub async fn add(_ctx: &CommandContext) -> CommandResult {Ok(())}
 /// command!{
@@ -100,9 +100,9 @@ mod tests;
 ///
 /// `grid size` with choices of 1, 5, and 12
 /// ```
-/// # use serenity_command_handler_macros::*;
-/// # use serenity_command_handler::commands::*;
-/// # use serenity_command_handler::framework::*;
+/// # use slashy_macros::*;
+/// # use slashy::commands::*;
+/// # use slashy::framework::*;
 /// # #[subcommand]
 /// # pub async fn grid(_ctx: &CommandContext) -> CommandResult {Ok(())}
 /// command!{
@@ -119,9 +119,9 @@ mod tests;
 /// This includes not allowing required arguments after optional ones.
 ///
 /// ```compile_fail
-/// # use serenity_command_handler_macros::*;
-/// # use serenity_command_handler::commands::*;
-/// # use serenity_command_handler::framework::*;
+/// # use slashy_macros::*;
+/// # use slashy::commands::*;
+/// # use slashy::framework::*;
 /// # #[subcommand]
 /// # pub async fn test(_ctx: &CommandContext) -> CommandResult {Ok(())}
 /// command!{
