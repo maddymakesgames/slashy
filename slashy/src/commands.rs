@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, fmt::Display};
 
 use serde_json::json;
 use serenity::futures::future::BoxFuture;
@@ -26,6 +26,26 @@ pub type CommandFunction = fn(&CommandContext) -> BoxFuture<CommandResult>;
 pub type CommandResult<T = ()> = Result<T, CommandError>;
 /// Variable error type for commands
 pub type CommandError = Box<dyn Error + Send + Sync>;
+
+#[derive(Debug)]
+/// Generic error type
+pub struct SlashyError (String);
+
+impl SlashyError {
+    pub fn new(err: &str) -> Self {
+        SlashyError(err.to_string())
+    }
+}
+
+unsafe impl<'a> Sync for SlashyError {}
+
+impl Error for SlashyError {}
+
+impl Display for SlashyError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 /// The root of the command arguments tree
 ///

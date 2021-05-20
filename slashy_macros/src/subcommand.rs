@@ -1,11 +1,22 @@
 use proc_macro2::{Ident, Span};
-use quote::{quote};
-use syn::{FnArg, ItemFn, Lifetime, ReturnType, Token, Type, ext::IdentExt, parse::Parse, punctuated::Punctuated, spanned::Spanned};
+use quote::quote;
+use syn::{
+    ext::IdentExt,
+    parse::Parse,
+    punctuated::Punctuated,
+    spanned::Spanned,
+    FnArg,
+    ItemFn,
+    Lifetime,
+    ReturnType,
+    Token,
+    Type,
+};
 
 pub fn format_subcommand(func: SubCommandFunc, args: SubCommandArgs) -> proc_macro::TokenStream {
     let perms = match args.perms_checks {
         Some(p) => p,
-        None => Punctuated::default()
+        None => Punctuated::default(),
     };
     let perms = perms.into_iter().collect::<Vec<Ident>>();
     let dms = args.works_in_dms;
@@ -60,13 +71,13 @@ pub fn format_subcommand(func: SubCommandFunc, args: SubCommandArgs) -> proc_mac
                         if #(!#perms(&#ctx_input.ctx, &member, &c).await?)&&* {
                             #block
                         } else {
-                            Ok(())
+                            Err(::slashy::commands::SlashyError::new("User does not have permissions"))
                         }
                     },
                     _ => if #dms {
                         #block
                     } else {
-                        Ok(())
+                        Err(::slashy::commands::SlashyError::new("Command is not available in dms"))
                     }
                 }
             }
@@ -75,7 +86,7 @@ pub fn format_subcommand(func: SubCommandFunc, args: SubCommandArgs) -> proc_mac
                 if #(!#perms().await?)&&* {
                     #block
                 } else {
-                    Ok(())
+                    Err(Box::new(crate::commands::SlashyError::new("User does not have permissions")))
                 }
             }
         }
@@ -133,7 +144,7 @@ pub fn format_subcommand(func: SubCommandFunc, args: SubCommandArgs) -> proc_mac
 
 
 pub struct SubCommandFunc {
-    block: ItemFn
+    block: ItemFn,
 }
 
 impl Parse for SubCommandFunc {
@@ -150,7 +161,6 @@ pub struct SubCommandArgs {
 
 impl Parse for SubCommandArgs {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-
         let works_in_dms = match Ident::parse_any(&input.fork()) {
             Ok(l) => {
                 let str = l.to_string();
@@ -164,10 +174,8 @@ impl Parse for SubCommandArgs {
                 } else {
                     false
                 }
-            },
-            Err(_) => {
-                false
             }
+            Err(_) => false,
         };
 
         if input.peek(Token![,]) {
@@ -176,8 +184,13 @@ impl Parse for SubCommandArgs {
 
         let perms_checks = if input.peek(Ident::peek_any) {
             Some(Punctuated::<Ident, Token![,]>::parse_terminated(input)?)
-        } else {None};
+        } else {
+            None
+        };
 
-        Ok(SubCommandArgs { perms_checks, works_in_dms })
+        Ok(SubCommandArgs {
+            perms_checks,
+            works_in_dms,
+        })
     }
 }
