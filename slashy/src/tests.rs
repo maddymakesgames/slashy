@@ -2,8 +2,14 @@
 pub mod test {
     use std::collections::HashMap;
 
-    use crate::{argument::Argument, command, commands::CommandResult, framework::{CommandContext, CommandSource}, permissions::PermsResult, permissions_check, subcommand};
-    use serenity::{FutureExt, client::Context, model::{channel::GuildChannel, guild::Member}};
+    use crate::{
+        commands::CommandResult,
+        framework::{CommandContext, CommandSource},
+        permissions::PermsResult,
+        permissions_check,
+        subcommand,
+    };
+    use serenity::FutureExt;
 
     #[test]
     fn subcommand() {
@@ -35,13 +41,13 @@ pub mod test {
         }
 
         #[subcommand]
-        async fn success(_ctx: &CommandContext) -> CommandResult<u32> {
-            Ok(5)
+        async fn success(_ctx: &CommandContext) -> CommandResult {
+            Ok(())
         }
 
         #[subcommand(fail)]
-        async fn failure(_ctx: &CommandContext) -> CommandResult<u32> {
-            Ok(5)
+        async fn failure(_ctx: &CommandContext) -> CommandResult {
+            Ok(())
         }
     }
 }
