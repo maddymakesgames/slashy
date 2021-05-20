@@ -1,9 +1,9 @@
 #![feature(proc_macro_diagnostic)]
 
-use proc_macro2::{Span};
+use proc_macro2::Span;
 use quote::{quote, ToTokens};
 use subcommand::format_subcommand;
-use syn::{FnArg, ItemFn, Lifetime, ReturnType, Type, parse_macro_input};
+use syn::{parse_macro_input, FnArg, ItemFn, Lifetime, ReturnType, Type};
 
 extern crate proc_macro;
 
