@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 slashy_macros = {path = "../slashy_macros"}
 
-serenity = { git = "https://github.com/serenity-rs/serenity", rev = "dbc40cbe6421060933b2d83176e7ec617adf5c8c", default-features = false, features = ["unstable_discord_api", "builder", "cache", "client", "gateway", "http", "model", "utils", "rustls_backend"] }
+serenity = { version = "0.10.7", default-features = false, features = ["unstable_discord_api", "builder", "cache", "client", "gateway", "http", "model", "utils", "rustls_backend"] }
 tokio = { version = "1.2.0", features = ["macros", "rt-multi-thread"] }
 serde_json = "1.0.62"
 serde = "1.0.123"

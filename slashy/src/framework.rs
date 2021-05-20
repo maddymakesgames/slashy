@@ -45,9 +45,9 @@ pub struct Framework<T: SettingsProvider> {
 impl<T: SettingsProvider> Framework<T> {
     /// Creates a new Framework
     pub async fn new(settings: T, application_id: u64, token: String) -> Self {
-        let http = Http::new_with_token(&token);
+        let http = Http::new_with_token_application_id(&token, application_id);
         let registered_command_cache = http
-            .get_global_application_commands(application_id)
+            .get_global_application_commands()
             .await
             .unwrap()
             .iter()
@@ -90,7 +90,7 @@ impl<T: SettingsProvider> Framework<T> {
         match guild_id {
             Some(g) => {
                 let commmand_cache = http
-                    .get_guild_application_commands(self.application_id, g.0)
+                    .get_guild_application_commands(g.0)
                     .await
                     .unwrap()
                     .iter()
@@ -98,7 +98,6 @@ impl<T: SettingsProvider> Framework<T> {
                     .collect::<HashMap<String, CommandId>>();
                 if commmand_cache.contains_key(&cmd.name.to_owned()) {
                     http.edit_guild_application_command(
-                        self.application_id,
                         g.0,
                         commmand_cache.get(&cmd.name.to_owned()).unwrap().0,
                         &serde_json::to_value(cmd)?,
@@ -106,7 +105,6 @@ impl<T: SettingsProvider> Framework<T> {
                     .await?;
                 } else {
                     http.create_guild_application_command(
-                        self.application_id,
                         g.0,
                         &serde_json::to_value(cmd)?,
                     )
@@ -119,7 +117,6 @@ impl<T: SettingsProvider> Framework<T> {
                     .contains_key(&cmd.name.to_owned())
                 {
                     http.edit_global_application_command(
-                        self.application_id,
                         self.registered_command_cache
                             .get(&cmd.name.to_owned())
                             .unwrap()
@@ -129,7 +126,6 @@ impl<T: SettingsProvider> Framework<T> {
                     .await?;
                 } else {
                     http.create_global_application_command(
-                        self.application_id,
                         &serde_json::to_value(cmd)?,
                     )
                     .await?;
@@ -171,6 +167,7 @@ macro_rules! event_handler_runners {
 
 
 #[async_trait]
+#[cfg(not(test))]
 impl<T: SettingsProvider + Send + Sync> EventHandler for Framework<T> {
     // Run any other EventHandlers we have registered
     event_handler_runners! {
@@ -230,7 +227,7 @@ impl<T: SettingsProvider + Send + Sync> EventHandler for Framework<T> {
             for (reg_name, reg_id) in &self.registered_command_cache {
                 if !self.commands.contains_key(reg_name.as_str()) {
                     ctx.http
-                        .delete_global_application_command(self.application_id, reg_id.0)
+                        .delete_global_application_command(reg_id.0)
                         .await
                         .unwrap();
                 }
@@ -369,6 +366,7 @@ impl<T: SettingsProvider + Send + Sync> EventHandler for Framework<T> {
                                 #[cfg(debug_assertions)]
                                 interaction
                                     .channel_id
+                                    .unwrap()
                                     .send_message(ctx, |m| m.content(e))
                                     .await
                                     .unwrap();
@@ -377,8 +375,10 @@ impl<T: SettingsProvider + Send + Sync> EventHandler for Framework<T> {
                     }
                     // Do nothing rn
                     None => {
+                        #[cfg(debug_assertions)]
                         interaction
                             .channel_id
+                            .unwrap()
                             .send_message(ctx, |m| {
                                 m.content(format!("Invalid arguments for command {}", cmd.name))
                             })
@@ -386,8 +386,12 @@ impl<T: SettingsProvider + Send + Sync> EventHandler for Framework<T> {
                             .unwrap();
                     }
                 }
-            },
-            None => println!("We got command `{}` which is not registered.\nMost likely the global command cache has not updated.", name),
+            }
+            None => println!(
+                "We got command `{}` which is not registered.\nMost likely the global command \
+                 cache has not updated.",
+                name
+            ),
         }
     }
 }
@@ -434,14 +438,14 @@ impl CommandContext {
     }
 
     /// Gets the User that triggered the command
-    pub fn author(&self) -> &User {
+    pub fn author(&self) -> Option<User> {
         match &self.source {
-            CommandSource::Interaction(i) => &i.member.user,
-            CommandSource::Message(m) => &m.author,
+            CommandSource::Interaction(i) => i.member.clone().map(|m| m.user),
+            CommandSource::Message(m) => Some(m.author.clone()),
         }
     }
 
-    pub async fn send_str<F>(&self, content: &str) -> Result<()> {
+    pub async fn send_str(&self, content: &str) -> Result<()> {
         match &self.source {
             CommandSource::Interaction(i) =>
                 i.create_interaction_response(&self.ctx, |c| {
@@ -507,7 +511,7 @@ impl CommandContext {
     pub async fn send_message<'a, F>(&self, f: F) -> Result<Message>
     where for<'b> F: FnOnce(&'b mut CreateMessage<'a>) -> &'b mut CreateMessage<'a> {
         match &self.source {
-            CommandSource::Interaction(i) => i.channel_id.send_message(&self.ctx, f).await,
+            CommandSource::Interaction(i) => i.channel_id.unwrap().send_message(&self.ctx, f).await,
             CommandSource::Message(m) => m.channel_id.send_message(&self.ctx, f).await,
         }
     }
@@ -515,7 +519,7 @@ impl CommandContext {
     /// Gets the member who triggered the command
     pub async fn member(&self) -> Result<Member> {
         match &self.source {
-            CommandSource::Interaction(i) => Ok(i.member.clone()),
+            CommandSource::Interaction(i) => i.member.clone().ok_or(serenity::Error::Other("No member on interaction")),
             CommandSource::Message(m) => m.member(&self.ctx).await,
         }
     }
@@ -523,7 +527,10 @@ impl CommandContext {
     /// Gets the guild the command was triggered in
     pub async fn guild(&self) -> Result<PartialGuild> {
         match &self.source {
-            CommandSource::Interaction(i) => self.ctx.http.get_guild(i.guild_id.0).await,
+            CommandSource::Interaction(i) => match i.guild_id {
+                Some(g) => self.ctx.http.get_guild(g.0).await,
+                None => Err(serenity::Error::Other("Called guild() without a guild_id"))
+            },
             CommandSource::Message(m) => match m.guild_id {
                 Some(g) => self.ctx.http.get_guild(g.0).await,
                 None => Err(serenity::Error::Other("Called guild() without a guild_id")),
@@ -531,10 +538,18 @@ impl CommandContext {
         }
     }
 
+    /// Gets the guild id the command was triggered in
+    pub fn guild_id(&self) -> Option<GuildId> {
+        match &self.source {
+            CommandSource::Interaction(i) => i.guild_id,
+            CommandSource::Message(m) => m.guild_id,
+        }
+    }
+
     /// Gets the channel the command was triggered in
     pub async fn channel(&self) -> Result<Channel> {
         match &self.source {
-            CommandSource::Interaction(i) => i.channel_id.to_channel(&self.ctx).await,
+            CommandSource::Interaction(i) => i.channel_id.unwrap().to_channel(&self.ctx).await,
             CommandSource::Message(m) => m.channel_id.to_channel(&self.ctx).await,
         }
     }
