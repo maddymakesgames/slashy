@@ -40,14 +40,31 @@ pub mod test {
             Ok(false)
         }
 
-        #[subcommand]
-        async fn success(_ctx: &CommandContext) -> CommandResult {
-            Ok(())
+        #[subcommand(pass)]
+        async fn success(_ctx: &CommandContext) -> CommandResult<bool> {
+            Ok(true)
         }
 
         #[subcommand(fail)]
-        async fn failure(_ctx: &CommandContext) -> CommandResult {
-            Ok(())
+        async fn failure(_ctx: &CommandContext) -> CommandResult<bool> {
+            Ok(true)
+        }
+
+        let x = success(&CommandContext::new(CommandSource::Test(""), HashMap::new())).now_or_never().unwrap();
+        let y = failure(&CommandContext::new(CommandSource::Test(""), HashMap::new())).now_or_never().unwrap();
+
+        println!("{:?}", x);
+        println!("{:?}", y);
+
+        match x {
+            Ok(b) => assert!(b),
+            Err(_) => assert!(false)
+        }
+
+
+        match y {
+            Ok(b) => assert!(!b),
+            Err(_) => assert!(true)
         }
     }
 }

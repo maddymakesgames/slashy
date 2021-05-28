@@ -65,28 +65,30 @@ pub fn format_subcommand(func: SubCommandFunc, args: SubCommandArgs) -> proc_mac
             #[cfg(not(test))]
             {
                 use ::serenity::model::channel::Channel;
+                use ::std::error::Error;
                 let member = #ctx_input.member().await?;
                 match #ctx_input.channel().await? {
                     Channel::Guild(c) => {
-                        if #(!#perms(&#ctx_input.ctx, &member, &c).await?)&&* {
+                        if #(#perms(&#ctx_input.ctx, &member, &c).await?)&&* {
                             #block
                         } else {
-                            Err(::slashy::commands::SlashyError::new("User does not have permissions"))
+                            Err(Box::new(::slashy::commands::SlashyError::new("User does not have permissions")) as Box<dyn Error + Sync + std::marker::Send + 'static>)
                         }
                     },
                     _ => if #dms {
                         #block
                     } else {
-                        Err(::slashy::commands::SlashyError::new("Command is not available in dms"))
+                        Err(Box::new(::slashy::commands::SlashyError::new("Command is not available in dms")) as Box<dyn Error + Sync + std::marker::Send + 'static>)
                     }
                 }
             }
             #[cfg(test)]
             {
-                if #(!#perms().await?)&&* {
+                use ::std::error::Error;
+                if #(#perms().await?)&&* {
                     #block
                 } else {
-                    Err(Box::new(crate::commands::SlashyError::new("User does not have permissions")))
+                    Err(Box::new(crate::commands::SlashyError::new("User does not have permissions")) as Box<dyn Error + Sync + std::marker::Send + 'static>)
                 }
             }
         }
@@ -100,38 +102,6 @@ pub fn format_subcommand(func: SubCommandFunc, args: SubCommandArgs) -> proc_mac
         #vis fn #name<'fut>(#(#input),*) -> ::serenity::futures::future::BoxFuture<'fut, #return_ty> {
             use ::serenity::futures::future::FutureExt;
             async move {
-                const _: fn() = || {
-                    trait TypeEq {
-                        type This: ?Sized;
-                    }
-                    impl<T: ?Sized> TypeEq for T {
-                        type This = Self;
-                    }
-                    fn assert_type_eq_all<T, U>()
-                    where
-                        T: ?Sized + TypeEq<This = U>,
-                        U: ?Sized,
-                    {
-                    }
-                    #[cfg(not(test))]
-                    assert_type_eq_all::<CommandResult, ::slashy::commands::CommandResult>();
-                };
-                const _: fn() = || {
-                    trait TypeEq {
-                        type This: ?Sized;
-                    }
-                    impl<T: ?Sized> TypeEq for T {
-                        type This = Self;
-                    }
-                    fn assert_type_eq_all<T, U>()
-                    where
-                        T: ?Sized + TypeEq<This = U>,
-                        U: ?Sized,
-                    {
-                    }
-                    #[cfg(not(test))]
-                    assert_type_eq_all::<&CommandContext, &::slashy::framework::CommandContext>();
-                };
 
                 #permmissions_runner
             }
