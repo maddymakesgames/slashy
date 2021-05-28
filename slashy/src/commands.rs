@@ -37,8 +37,6 @@ impl SlashyError {
     }
 }
 
-unsafe impl<'a> Sync for SlashyError {}
-
 impl Error for SlashyError {}
 
 impl Display for SlashyError {
