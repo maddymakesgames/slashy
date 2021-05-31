@@ -1,9 +1,9 @@
-use std::{collections::HashMap, iter::Peekable, slice::Iter};
+use std::{collections::HashMap, fmt::Display, iter::Peekable, slice::Iter};
 
-use serenity::model::{
+use serenity::{client::Cache, model::{
     id::{ChannelId, RoleId, UserId},
     interactions::{ApplicationCommandInteractionDataOption as InteractionOption, Interaction},
-};
+}};
 
 use regex::Regex;
 
@@ -243,7 +243,7 @@ impl Argument {
     /// ```
     pub fn get_arg_strings<'a>(str: &'a str) -> Vec<&'a str> {
         lazy_static::lazy_static! {
-            static ref SPLITTER: Regex = Regex::new(r#""(.+)"|(?:\w|\.)+"#).unwrap();
+            static ref SPLITTER: Regex = Regex::new(r#""(.+)"|(?:\S)+"#).unwrap();
         };
 
         let mut output = Vec::new();
@@ -322,6 +322,32 @@ impl Argument {
             Err(_) => Err(()),
         }
     }
+
+    async fn to_string(&self, cache: &Cache) -> String {
+        match self {
+            Argument::Boolean(b) => format!("{}", b),
+            Argument::Channel(c) => format!("{}", c.name(cache).await.unwrap()),
+            Argument::Integer(i) => format!("{}", i),
+            Argument::Role(r) => format!("{}", r.to_role_cached(cache).await.unwrap().name),
+            Argument::String(s) => s.clone(),
+            Argument::User(u) => u.to_user_cached(cache).await.unwrap().name,
+        }
+    }
+}
+
+#[test]
+fn str_split_test() {
+    let test1 = "this is a test!";
+    let test2 = "we are testing! yay";
+    let test3 = "this is a test \"involving quotes\"";
+
+    let args1 = Argument::get_arg_strings(test1);
+    let args2 = Argument::get_arg_strings(test2);
+    let args3 = Argument::get_arg_strings(test3);
+
+    assert_eq!(args1, vec!["this", "is", "a", "test!"]);
+    assert_eq!(args2, vec!["we", "are", "testing!", "yay"]);
+    assert_eq!(args3, vec!["this", "is", "a", "test", "involving quotes"]);
 }
 
 #[test]
