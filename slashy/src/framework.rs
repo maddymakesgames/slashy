@@ -24,7 +24,7 @@ use serenity::{
             VoiceServerUpdateEvent,
         },
         guild::{Emoji, Guild, GuildUnavailable, Member, PartialGuild, Role},
-        id::{ChannelId, CommandId, EmojiId, GuildId, MessageId, RoleId},
+        id::{ChannelId, CommandId, EmojiId, GuildId, MessageId, RoleId, UserId},
         interactions::{Interaction, InteractionResponseType, InteractionType},
         prelude::{CurrentUser, Presence, Ready, User, VoiceState},
     },
@@ -360,7 +360,9 @@ impl<T: SettingsProvider + Send + Sync> EventHandler for Framework<T> {
                         // Don't clone ctx if we don't need to
                         let context = CommandContext::new(ctx, source, args);
                         match func(&context).await {
-                            Ok(_) => {}
+                            Ok(_) => {
+                                
+                            }
                             Err(e) => {
                                 eprintln!("{:?}", e);
                                 #[cfg(debug_assertions)]
@@ -421,6 +423,20 @@ pub struct CommandContext {
     args: HashMap<String, Argument>,
 }
 
+macro_rules! arg_methods {
+    ($($name: ident, $arg_type: ident, $ret_type: tt),*) => {
+        $(
+            #[doc = concat!("Gets the value of a ", stringify!($arg_type)," argument")]
+            pub fn $name<'a>(&'a self, key: &str) -> Option<&'a $ret_type> {
+                match self.get_arg(key)? {
+                    Argument::$arg_type(r) => Some(r),
+                    _ => None
+                }
+            }
+        )*
+    };
+}
+
 #[cfg(not(test))]
 impl CommandContext {
     /// Creates a new CommandContext
@@ -437,6 +453,15 @@ impl CommandContext {
         self.args.get(key)
     }
 
+    arg_methods!{
+        get_str_arg, String, String,
+        get_int_arg, Integer, i32,
+        get_bool_arg, Boolean, bool,
+        get_user_arg, User, UserId,
+        get_channel_arg, Channel, ChannelId,
+        get_role_arg, Role, RoleId
+    }
+
     /// Gets the User that triggered the command
     pub fn author(&self) -> Option<User> {
         match &self.source {
@@ -445,6 +470,7 @@ impl CommandContext {
         }
     }
 
+    /// Sends a string in the channel the command was triggered in
     pub async fn send_str(&self, content: &str) -> Result<()> {
         match &self.source {
             CommandSource::Interaction(i) =>
