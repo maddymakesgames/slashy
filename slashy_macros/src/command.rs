@@ -278,7 +278,7 @@ impl ToTokens for ChoiceMap {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let key = &self.key;
         let value = &self.value;
-        tokens.append_all(quote! {ArgumentChoice{ name: #key, value: #value}})
+        tokens.append_all(quote! {ArgumentChoice{ name: #key, value: #value.to_owned()}})
     }
 }
 
