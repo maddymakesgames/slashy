@@ -1,9 +1,6 @@
-use std::{collections::HashMap, fmt::Display, iter::Peekable, slice::Iter};
+use std::{collections::HashMap, fmt::Display, hint::unreachable_unchecked, iter::Peekable, slice::Iter};
 
-use serenity::{client::Cache, model::{
-    id::{ChannelId, RoleId, UserId},
-    interactions::{ApplicationCommandInteractionDataOption as InteractionOption, Interaction},
-}};
+use serenity::{client::Cache, model::{id::{ChannelId, RoleId, UserId}, interactions::{ApplicationCommandInteractionDataOption as InteractionOption, Interaction, InteractionData}}};
 
 use regex::Regex;
 
@@ -210,7 +207,12 @@ impl Argument {
     fn get_arguments_from_interaction(interaction: &Interaction) -> Vec<InteractionOption> {
         let mut output = Vec::new();
 
-        for option in interaction.data.clone().unwrap().options {
+        let data = match interaction.data.clone().unwrap() {
+            InteractionData::ApplicationCommand(data) => data,
+            _ => {unreachable!("Got data for non Command Interaction");}
+        };
+
+        for option in data.options {
             output.extend(Self::traverse_tree(&option))
         }
 

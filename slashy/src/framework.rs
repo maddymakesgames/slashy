@@ -4,15 +4,7 @@
 use std::{collections::HashMap, fmt::Debug};
 
 use serde_json::Value;
-use serenity::{
-    async_trait,
-    builder::{CreateEmbed, CreateMessage},
-    client::{bridge::gateway::event::ShardStageUpdateEvent, Context, EventHandler},
-    futures::future::{BoxFuture, FutureExt},
-    http::Http,
-    model::{
-        channel::{Channel, ChannelCategory, GuildChannel, Message, Reaction},
-        event::{
+use serenity::{Result, async_trait, builder::{CreateEmbed, CreateMessage}, client::{bridge::gateway::event::ShardStageUpdateEvent, Context, EventHandler}, futures::future::{BoxFuture, FutureExt}, http::Http, model::{channel::{Channel, ChannelCategory, GuildChannel, Message, Reaction}, event::{
             ChannelPinsUpdateEvent,
             GuildMembersChunkEvent,
             InviteCreateEvent,
@@ -22,14 +14,7 @@ use serenity::{
             ResumedEvent,
             TypingStartEvent,
             VoiceServerUpdateEvent,
-        },
-        guild::{Emoji, Guild, GuildUnavailable, Member, PartialGuild, Role},
-        id::{ChannelId, CommandId, EmojiId, GuildId, MessageId, RoleId, UserId},
-        interactions::{Interaction, InteractionResponseType, InteractionType},
-        prelude::{CurrentUser, Presence, Ready, User, VoiceState},
-    },
-    Result,
-};
+        }, guild::{Emoji, Guild, GuildUnavailable, Member, PartialGuild, Role}, id::{ChannelId, CommandId, EmojiId, GuildId, MessageId, RoleId, UserId}, interactions::{Interaction, InteractionData, InteractionResponseType, InteractionType}, prelude::{CurrentUser, Presence, Ready, User, VoiceState}}};
 
 use crate::{argument::Argument, commands::Command, settings::SettingsProvider};
 
@@ -340,7 +325,10 @@ impl<T: SettingsProvider + Send + Sync> EventHandler for Framework<T> {
         }
 
         let name = match &interaction.data {
-            Some(data) => data.name.to_owned(),
+            Some(data) => match data {
+                InteractionData::ApplicationCommand(data) => data.name.to_owned(),
+                _ => unreachable!()
+            },
             // Should never be reached if we have a command interaction
             // All commands *should* come with data
             None => unreachable!(),
@@ -512,7 +500,7 @@ impl CommandContext {
                 i.create_interaction_response(&self.ctx, |c| {
                     c.kind(InteractionResponseType::ChannelMessageWithSource);
                     c.interaction_response_data(|n| {
-                        n.embed(embed);
+                        n.create_embed(embed);
 
                         n
                     });
