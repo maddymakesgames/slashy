@@ -166,7 +166,7 @@ macro_rules! event_handler_runners {
 
 
 #[async_trait]
-#[cfg(not(test))]
+// #[cfg(not(test))]
 impl<T: SettingsProvider + Send + Sync> EventHandler for Framework<T> {
     // Run any other EventHandlers we have registered
     event_handler_runners! {
@@ -334,7 +334,7 @@ impl<T: SettingsProvider + Send + Sync> EventHandler for Framework<T> {
                 .await
         }
 
-        let app_cmd = match &interaction {
+        let app_cmd = match interaction {
             Interaction::ApplicationCommand(data) => data,
             // Should never be reached if we have a command interaction
             // All commands *should* come with data
