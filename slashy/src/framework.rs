@@ -4,7 +4,15 @@
 use std::{collections::HashMap, fmt::Debug};
 
 use serde_json::Value;
-use serenity::{Result, async_trait, builder::{CreateEmbed, CreateMessage}, client::{bridge::gateway::event::ShardStageUpdateEvent, Context, EventHandler}, futures::future::{BoxFuture, FutureExt}, http::Http, model::{channel::{Channel, ChannelCategory, GuildChannel, Message, Reaction}, event::{
+use serenity::{
+    async_trait,
+    builder::{CreateEmbed, CreateMessage},
+    client::{bridge::gateway::event::ShardStageUpdateEvent, Context, EventHandler},
+    futures::future::{BoxFuture, FutureExt},
+    http::Http,
+    model::{
+        channel::{Channel, ChannelCategory, GuildChannel, Message, Reaction},
+        event::{
             ChannelPinsUpdateEvent,
             GuildMembersChunkEvent,
             InviteCreateEvent,
@@ -14,7 +22,18 @@ use serenity::{Result, async_trait, builder::{CreateEmbed, CreateMessage}, clien
             ResumedEvent,
             TypingStartEvent,
             VoiceServerUpdateEvent,
-        }, guild::{Emoji, Guild, GuildUnavailable, Member, PartialGuild, Role}, id::{ChannelId, CommandId, EmojiId, GuildId, MessageId, RoleId, UserId}, interactions::{Interaction, InteractionData, InteractionResponseType, InteractionType}, prelude::{CurrentUser, Presence, Ready, User, VoiceState}}};
+        },
+        guild::{Emoji, Guild, GuildUnavailable, Member, PartialGuild, Role},
+        id::{ChannelId, CommandId, EmojiId, GuildId, MessageId, RoleId, UserId},
+        interactions::{
+            application_command::ApplicationCommandInteraction,
+            Interaction,
+            InteractionResponseType,
+        },
+        prelude::{CurrentUser, Presence, Ready, User, VoiceState},
+    },
+    Result,
+};
 
 use crate::{argument::Argument, commands::Command, settings::SettingsProvider};
 
@@ -89,11 +108,8 @@ impl<T: SettingsProvider> Framework<T> {
                     )
                     .await?;
                 } else {
-                    http.create_guild_application_command(
-                        g.0,
-                        &serde_json::to_value(cmd)?,
-                    )
-                    .await?;
+                    http.create_guild_application_command(g.0, &serde_json::to_value(cmd)?)
+                        .await?;
                 }
             }
             None => {
@@ -110,10 +126,8 @@ impl<T: SettingsProvider> Framework<T> {
                     )
                     .await?;
                 } else {
-                    http.create_global_application_command(
-                        &serde_json::to_value(cmd)?,
-                    )
-                    .await?;
+                    http.create_global_application_command(&serde_json::to_value(cmd)?)
+                        .await?;
                 }
             }
         }
@@ -320,26 +334,19 @@ impl<T: SettingsProvider + Send + Sync> EventHandler for Framework<T> {
                 .await
         }
 
-        if interaction.kind != InteractionType::ApplicationCommand {
-            return;
-        }
-
-        let name = match &interaction.data {
-            Some(data) => match data {
-                InteractionData::ApplicationCommand(data) => data.name.to_owned(),
-                _ => unreachable!()
-            },
+        let app_cmd = match &interaction {
+            Interaction::ApplicationCommand(data) => data,
             // Should never be reached if we have a command interaction
             // All commands *should* come with data
-            None => unreachable!(),
+            _ => unreachable!(),
         };
 
-        match self.commands.get(name.as_str()) {
+        match self.commands.get(app_cmd.data.name.as_str()) {
             Some(cmd) => {
                 #[cfg(debug_assertions)]
-                let source = CommandSource::Interaction(interaction.clone());
+                let source = CommandSource::Interaction(app_cmd.clone());
                 #[cfg(not(debug_assertions))]
-                let source = CommandSource::Interaction(interaction);
+                let source = CommandSource::Interaction(app_cmd);
                 match Argument::parse(&source, &cmd.arguments_tree) {
                     Some((args, func)) => {
                         #[cfg(debug_assertions)]
@@ -348,15 +355,12 @@ impl<T: SettingsProvider + Send + Sync> EventHandler for Framework<T> {
                         // Don't clone ctx if we don't need to
                         let context = CommandContext::new(ctx, source, args);
                         match func(&context).await {
-                            Ok(_) => {
-                                
-                            }
+                            Ok(_) => {}
                             Err(e) => {
                                 eprintln!("{:?}", e);
                                 #[cfg(debug_assertions)]
-                                interaction
+                                app_cmd
                                     .channel_id
-                                    .unwrap()
                                     .send_message(ctx, |m| m.content(e))
                                     .await
                                     .unwrap();
@@ -366,9 +370,8 @@ impl<T: SettingsProvider + Send + Sync> EventHandler for Framework<T> {
                     // Do nothing rn
                     None => {
                         #[cfg(debug_assertions)]
-                        interaction
+                        app_cmd
                             .channel_id
-                            .unwrap()
                             .send_message(ctx, |m| {
                                 m.content(format!("Invalid arguments for command {}", cmd.name))
                             })
@@ -380,7 +383,7 @@ impl<T: SettingsProvider + Send + Sync> EventHandler for Framework<T> {
             None => println!(
                 "We got command `{}` which is not registered.\nMost likely the global command \
                  cache has not updated.",
-                name
+                app_cmd.data.name
             ),
         }
     }
@@ -395,7 +398,7 @@ pub trait CommandInit {
 /// Stores the source the command was called from
 #[allow(missing_docs)]
 pub enum CommandSource {
-    Interaction(Interaction),
+    Interaction(ApplicationCommandInteraction),
     Message(Message),
     #[cfg(test)]
     Test(&'static str),
@@ -427,6 +430,15 @@ macro_rules! arg_methods {
 
 #[cfg(not(test))]
 impl CommandContext {
+    arg_methods! {
+        get_str_arg, String, String,
+        get_int_arg, Integer, i32,
+        get_bool_arg, Boolean, bool,
+        get_user_arg, User, UserId,
+        get_channel_arg, Channel, ChannelId,
+        get_role_arg, Role, RoleId
+    }
+
     /// Creates a new CommandContext
     pub(crate) fn new(
         ctx: Context,
@@ -439,15 +451,6 @@ impl CommandContext {
     /// Gets an argument
     pub fn get_arg<'a>(&'a self, key: &str) -> Option<&'a Argument> {
         self.args.get(key)
-    }
-
-    arg_methods!{
-        get_str_arg, String, String,
-        get_int_arg, Integer, i32,
-        get_bool_arg, Boolean, bool,
-        get_user_arg, User, UserId,
-        get_channel_arg, Channel, ChannelId,
-        get_role_arg, Role, RoleId
     }
 
     /// Gets the User that triggered the command
@@ -525,7 +528,7 @@ impl CommandContext {
     pub async fn send_message<'a, F>(&self, f: F) -> Result<Message>
     where for<'b> F: FnOnce(&'b mut CreateMessage<'a>) -> &'b mut CreateMessage<'a> {
         match &self.source {
-            CommandSource::Interaction(i) => i.channel_id.unwrap().send_message(&self.ctx, f).await,
+            CommandSource::Interaction(i) => i.channel_id.send_message(&self.ctx, f).await,
             CommandSource::Message(m) => m.channel_id.send_message(&self.ctx, f).await,
         }
     }
@@ -533,7 +536,10 @@ impl CommandContext {
     /// Gets the member who triggered the command
     pub async fn member(&self) -> Result<Member> {
         match &self.source {
-            CommandSource::Interaction(i) => i.member.clone().ok_or(serenity::Error::Other("No member on interaction")),
+            CommandSource::Interaction(i) => i
+                .member
+                .clone()
+                .ok_or(serenity::Error::Other("No member on interaction")),
             CommandSource::Message(m) => m.member(&self.ctx).await,
         }
     }
@@ -543,7 +549,7 @@ impl CommandContext {
         match &self.source {
             CommandSource::Interaction(i) => match i.guild_id {
                 Some(g) => self.ctx.http.get_guild(g.0).await,
-                None => Err(serenity::Error::Other("Called guild() without a guild_id"))
+                None => Err(serenity::Error::Other("Called guild() without a guild_id")),
             },
             CommandSource::Message(m) => match m.guild_id {
                 Some(g) => self.ctx.http.get_guild(g.0).await,
@@ -563,7 +569,7 @@ impl CommandContext {
     /// Gets the channel the command was triggered in
     pub async fn channel(&self) -> Result<Channel> {
         match &self.source {
-            CommandSource::Interaction(i) => i.channel_id.unwrap().to_channel(&self.ctx).await,
+            CommandSource::Interaction(i) => i.channel_id.to_channel(&self.ctx).await,
             CommandSource::Message(m) => m.channel_id.to_channel(&self.ctx).await,
         }
     }

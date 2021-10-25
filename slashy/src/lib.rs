@@ -2,6 +2,7 @@
 
 //! A command framework for Serenity that allows commands to be registered both as a traditional text command and a discord slash command
 
+pub use serenity;
 /// Everything related to parsing and representing arguments.
 pub mod argument;
 /// Everything related to commands.

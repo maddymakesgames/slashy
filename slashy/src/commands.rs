@@ -29,7 +29,7 @@ pub type CommandError = Box<dyn Error + Send + Sync>;
 
 #[derive(Debug)]
 /// Generic error type
-pub struct SlashyError (String);
+pub struct SlashyError(String);
 
 impl SlashyError {
     pub fn new(err: &str) -> Self {

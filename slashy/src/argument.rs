@@ -1,6 +1,24 @@
-use std::{collections::HashMap, fmt::Display, hint::unreachable_unchecked, iter::Peekable, slice::Iter};
+use std::{
+    collections::HashMap,
+    fmt::Display,
+    hint::unreachable_unchecked,
+    iter::Peekable,
+    slice::Iter,
+};
 
-use serenity::{client::Cache, model::{id::{ChannelId, RoleId, UserId}, interactions::{ApplicationCommandInteractionDataOption as InteractionOption, Interaction, InteractionData}}};
+use serenity::{
+    client::Cache,
+    model::{
+        id::{ChannelId, RoleId, UserId},
+        interactions::{
+            application_command::{
+                ApplicationCommandInteraction,
+                ApplicationCommandInteractionDataOption as InteractionOption,
+            },
+            Interaction,
+        },
+    },
+};
 
 use regex::Regex;
 
@@ -145,7 +163,7 @@ impl Argument {
 
     /// Parses [InteractionOptions](InteractionOption) into Argument and gets the function pointer for the node we need to run
     pub fn parse_interaction(
-        interaction: &Interaction,
+        interaction: &ApplicationCommandInteraction,
         tree: &CommandArgumentsTree,
     ) -> Option<(HashMap<String, Self>, CommandFunction)> {
         let mut output = HashMap::new();
@@ -204,16 +222,13 @@ impl Argument {
         }
     }
 
-    fn get_arguments_from_interaction(interaction: &Interaction) -> Vec<InteractionOption> {
+    fn get_arguments_from_interaction(
+        interaction: &ApplicationCommandInteraction,
+    ) -> Vec<InteractionOption> {
         let mut output = Vec::new();
 
-        let data = match interaction.data.clone().unwrap() {
-            InteractionData::ApplicationCommand(data) => data,
-            _ => {unreachable!("Got data for non Command Interaction");}
-        };
-
-        for option in data.options {
-            output.extend(Self::traverse_tree(&option))
+        for option in &interaction.data.options {
+            output.extend(Self::traverse_tree(option))
         }
 
         output
