@@ -7,8 +7,8 @@ Instead of taking Serenity's attribute style of command registering, we register
 
 ### Basic Command
 ```rust
-use serenity::Client;
 use slashy::{
+    serenity::Client,
     framework::{
         Framework,
         CommandContext,
