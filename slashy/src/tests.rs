@@ -4,7 +4,7 @@ pub mod test {
 
     use crate::{
         commands::CommandResult,
-        framework::{CommandContext, CommandSource},
+        framework::CommandContext,
         permissions::PermsResult,
         permissions_check,
         subcommand,
@@ -18,13 +18,10 @@ pub mod test {
             Ok(5)
         }
 
-        let x = test(&CommandContext::new(
-            CommandSource::Test(""),
-            HashMap::new(),
-        ))
-        .now_or_never()
-        .unwrap()
-        .unwrap();
+        let x = test(&CommandContext::new_test(HashMap::new()))
+            .now_or_never()
+            .unwrap()
+            .unwrap();
         assert_eq!(x, 5);
     }
 
@@ -50,21 +47,27 @@ pub mod test {
             Ok(true)
         }
 
-        let x = success(&CommandContext::new(CommandSource::Test(""), HashMap::new())).now_or_never().unwrap();
-        let y = failure(&CommandContext::new(CommandSource::Test(""), HashMap::new())).now_or_never().unwrap();
+        let x = success(&CommandContext::new_test(HashMap::new()))
+            .now_or_never()
+            .unwrap();
+        let y = failure(&CommandContext::new_test(HashMap::new()))
+            .now_or_never()
+            .unwrap();
 
-        println!("{:?}", x);
-        println!("{:?}", y);
+        println!("{x:?}");
+        println!("{y:?}");
 
-        match x {
-            Ok(b) => assert!(b),
-            Err(_) => assert!(false)
+        if let Ok(b) = x {
+            assert!(b)
+        } else {
+            panic!()
         }
 
 
-        match y {
-            Ok(b) => assert!(!b),
-            Err(_) => assert!(true)
+        if let Ok(b) = y {
+            assert!(!b)
+        } else {
+            panic!()
         }
     }
 }

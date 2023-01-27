@@ -1,6 +1,10 @@
-use std::sync::{Arc, RwLock as StdRwLock, Mutex as StdMutex};
+use std::sync::{Arc, Mutex as StdMutex, RwLock as StdRwLock};
 
-use serenity::{futures::{lock::Mutex, FutureExt}, model::id::GuildId, prelude::RwLock};
+use serenity::{
+    futures::{lock::Mutex, FutureExt},
+    model::id::GuildId,
+    prelude::RwLock,
+};
 
 /// Allows users to define custom settings providers for the handler to pull from.
 pub trait SettingsProvider {
@@ -114,23 +118,23 @@ impl<T: SettingsProvider + Send> SettingsProvider for Arc<StdMutex<T>> {
 
 impl<T: SettingsProvider> SettingsProvider for Arc<T> {
     fn default_prefixes(&self) -> Vec<String> {
-        T::default_prefixes(&self)
+        T::default_prefixes(self)
     }
 
     fn prefixes(&self, guild_id: GuildId) -> Option<Vec<String>> {
-        T::prefixes(&self, guild_id)
+        T::prefixes(self, guild_id)
     }
 
     fn auto_register(&self) -> bool {
-        T::auto_register(&self)
+        T::auto_register(self)
     }
 
     fn auto_delete(&self) -> bool {
-        T::auto_delete(&self)
+        T::auto_delete(self)
     }
 
     fn auto_register_guilds(&self) -> Vec<GuildId> {
-        T::auto_register_guilds(&self)
+        T::auto_register_guilds(self)
     }
 }
 

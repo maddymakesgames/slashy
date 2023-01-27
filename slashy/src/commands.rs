@@ -32,6 +32,7 @@ pub type CommandError = Box<dyn Error + Send + Sync>;
 pub struct SlashyError(String);
 
 impl SlashyError {
+    /// Create a new error from an &str
     pub fn new(err: &str) -> Self {
         SlashyError(err.to_string())
     }

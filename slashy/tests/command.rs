@@ -1,11 +1,8 @@
-use std::collections::HashMap;
-
-use serenity::FutureExt;
 use slashy::{
     argument::Argument,
     command,
     commands::CommandResult,
-    framework::{CommandContext, CommandSource},
+    framework::CommandContext,
     subcommand,
 };
 

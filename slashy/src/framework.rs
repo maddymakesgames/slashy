@@ -11,6 +11,10 @@ use serenity::{
     futures::future::{BoxFuture, FutureExt},
     http::Http,
     model::{
+        application::interaction::{
+            application_command::ApplicationCommandInteraction,
+            Interaction,
+        },
         channel::{Channel, ChannelCategory, GuildChannel, Message, Reaction},
         event::{
             ChannelPinsUpdateEvent,
@@ -18,19 +22,22 @@ use serenity::{
             InviteCreateEvent,
             InviteDeleteEvent,
             MessageUpdateEvent,
-            PresenceUpdateEvent,
             ResumedEvent,
             TypingStartEvent,
             VoiceServerUpdateEvent,
         },
-        guild::{Emoji, Guild, GuildUnavailable, Member, PartialGuild, Role},
-        id::{ChannelId, CommandId, EmojiId, GuildId, MessageId, RoleId, UserId},
-        interactions::{
-            application_command::ApplicationCommandInteraction,
-            Interaction,
-            InteractionResponseType,
+        guild::{Emoji, Guild, Member, PartialGuild, Role},
+        id::{ChannelId, CommandId, EmojiId, GuildId, MessageId, RoleId},
+        prelude::{
+            interaction::InteractionResponseType,
+            CurrentUser,
+            Presence,
+            Ready,
+            UnavailableGuild,
+            User,
+            UserId,
+            VoiceState,
         },
-        prelude::{CurrentUser, Presence, Ready, User, VoiceState},
     },
     Result,
 };
@@ -49,7 +56,7 @@ pub struct Framework<T: SettingsProvider> {
 impl<T: SettingsProvider> Framework<T> {
     /// Creates a new Framework
     pub async fn new(settings: T, application_id: u64, token: String) -> Self {
-        let http = Http::new_with_token_application_id(&token, application_id);
+        let http = Http::new_with_application_id(&token, application_id);
         let registered_command_cache = http
             .get_global_application_commands()
             .await
@@ -176,16 +183,16 @@ impl<T: SettingsProvider + Send + Sync> EventHandler for Framework<T> {
         guild_ban_addition, g, GuildId, b, User;
         guild_ban_removal, g, GuildId, b, User;
         guild_create, g, Guild, i, bool;
-        guild_delete, i, GuildUnavailable, f, Option<Guild>;
+        guild_delete, i, UnavailableGuild, f, Option<Guild>;
         guild_emojis_update, g, GuildId, c, HashMap<EmojiId, Emoji>;
         guild_integrations_update, g, GuildId;
-        guild_member_addition, g, GuildId, m, Member;
+        guild_member_addition, m, Member;
         guild_member_removal, g, GuildId, u, User, m, Option<Member>;
         guild_member_update, o, Option<Member>, n, Member;
         guild_members_chunk, c, GuildMembersChunkEvent;
-        guild_role_create, g, GuildId, n, Role;
+        guild_role_create, n, Role;
         guild_role_delete, g, GuildId, r, RoleId, ro, Option<Role>;
-        guild_role_update, g, GuildId, o, Option<Role>, n, Role;
+        guild_role_update, o, Option<Role>, n, Role;
         guild_unavailable, g, GuildId;
         guild_update, o, Option<Guild>, n, PartialGuild;
         invite_create, d, InviteCreateEvent;
@@ -197,14 +204,14 @@ impl<T: SettingsProvider + Send + Sync> EventHandler for Framework<T> {
         reaction_remove, r, Reaction;
         reaction_remove_all, c, ChannelId, r, MessageId;
         presence_replace, a, Vec<Presence>;
-        presence_update, n, PresenceUpdateEvent;
+        presence_update, n, Presence;
         resume, a, ResumedEvent;
         shard_stage_update, a, ShardStageUpdateEvent;
         typing_start, a, TypingStartEvent;
         unknown, n, String, a, Value;
         user_update, o, CurrentUser, n, CurrentUser;
         voice_server_update, a, VoiceServerUpdateEvent;
-        voice_state_update, a, Option<GuildId>, o, Option<VoiceState>, n, VoiceState;
+        voice_state_update, o, Option<VoiceState>, n, VoiceState;
         webhook_update, g, GuildId, b, ChannelId
     }
 
@@ -234,7 +241,7 @@ impl<T: SettingsProvider + Send + Sync> EventHandler for Framework<T> {
         }
 
         if self.settings.auto_register() {
-            for (_, cmd) in &self.commands {
+            for cmd in self.commands.values() {
                 self.register_slash_command(&ctx.http, cmd, None)
                     .await
                     .unwrap()
@@ -242,7 +249,7 @@ impl<T: SettingsProvider + Send + Sync> EventHandler for Framework<T> {
         }
 
         for guild_id in self.settings.auto_register_guilds() {
-            for (_, cmd) in &self.commands {
+            for cmd in self.commands.values() {
                 self.register_slash_command(&ctx.http, cmd, Some(guild_id))
                     .await
                     .unwrap()
@@ -272,7 +279,7 @@ impl<T: SettingsProvider + Send + Sync> EventHandler for Framework<T> {
 
         for prefix in prefix_list {
             if message.content.starts_with(&prefix) {
-                found_prefix = prefix.to_string();
+                found_prefix = prefix;
                 break;
             }
         }
@@ -283,46 +290,33 @@ impl<T: SettingsProvider + Send + Sync> EventHandler for Framework<T> {
 
         let cropped_msg = &message.content[found_prefix.len() ..].to_owned();
 
-        let cmd_str = cropped_msg.split(" ").next().unwrap_or_default();
+        let cmd_str = cropped_msg.split(' ').next().unwrap_or_default();
 
-        match self.commands.get(cmd_str) {
-            Some(cmd) => {
+        if let Some(cmd) = self.commands.get(cmd_str) {
+            #[cfg(debug_assertions)]
+            let source = CommandSource::Message(message.clone());
+            #[cfg(not(debug_assertions))]
+            // Don't clone message if we aren't using it later
+            let source = CommandSource::Message(message);
+
+            if let Some((args, func)) = Argument::parse(&source, &cmd.arguments_tree) {
                 #[cfg(debug_assertions)]
-                let source = CommandSource::Message(message.clone());
+                let context = CommandContext::new(ctx.clone(), source, args);
                 #[cfg(not(debug_assertions))]
-                // Don't clone message if we aren't using it later
-                let source = CommandSource::Message(message);
-
-                match Argument::parse(&source, &cmd.arguments_tree) {
-                    Some((args, func)) => {
-                        #[cfg(debug_assertions)]
-                        let context = CommandContext::new(ctx.clone(), source, args);
-                        #[cfg(not(debug_assertions))]
-                        // Don't clone ctx if we don't need to
-                        let context = CommandContext::new(ctx, source, args);
-                        match func(&context).await {
-                            Ok(_) => {}
-                            Err(e) => {
-                                eprintln!("{:?}", e);
-                                #[cfg(debug_assertions)]
-                                // message sends should only fail on perm errors or too many chars
-                                // neither *should* occur while testing
-                                message
-                                    .channel_id
-                                    .send_message(ctx, |m| m.content(format!("Error: {}", e)))
-                                    .await
-                                    .unwrap();
-                            }
-                        }
-                    }
-                    // Don't do anything if arguments are wrong
-                    // Maybe handle later
-                    None => {}
+                // Don't clone ctx if we don't need to
+                let context = CommandContext::new(ctx, source, args);
+                if let Err(e) = func(&context).await {
+                    eprintln!("{e:?}");
+                    #[cfg(debug_assertions)]
+                    // message sends should only fail on perm errors or too many chars
+                    // neither *should* occur while testing
+                    message
+                        .channel_id
+                        .send_message(ctx, |m| m.content(format!("Error: {e}")))
+                        .await
+                        .unwrap();
                 }
             }
-            // If we don't have a command do nothing
-            // In the future we could have a handler for this but generally its best practice to not
-            None => {}
         }
     }
 
@@ -357,7 +351,7 @@ impl<T: SettingsProvider + Send + Sync> EventHandler for Framework<T> {
                         match func(&context).await {
                             Ok(_) => {}
                             Err(e) => {
-                                eprintln!("{:?}", e);
+                                eprintln!("{e:?}");
                                 #[cfg(debug_assertions)]
                                 app_cmd
                                     .channel_id
@@ -400,18 +394,46 @@ pub trait CommandInit {
 pub enum CommandSource {
     Interaction(ApplicationCommandInteraction),
     Message(Message),
-    #[cfg(test)]
-    Test(&'static str),
 }
 
 /// The context sent to a command's function
 /// Holds arguments, source and Serenity context
 pub struct CommandContext {
-    #[cfg(not(test))]
     /// The Serenity context that was with the event
     pub ctx: Context,
     source: CommandSource,
     args: HashMap<String, Argument>,
+}
+
+#[cfg(test)]
+impl CommandContext {
+    /// A method to create a CommandContext inside of tests
+    ///
+    /// This sets the CommandSource to be in an invalid state, so most methods will cause a panic or memory error
+    ///
+    /// Since this is only for use in tests this should not be an issues
+    ///
+    /// We can't really create valid state for things that require the discord api in tests
+    pub fn new_test(args: HashMap<String, Argument>) -> CommandContext {
+        CommandContext {
+            ctx: Context {
+                data: std::sync::Arc::new(serenity::prelude::RwLock::new(
+                    serenity::prelude::TypeMap::new(),
+                )),
+                shard: serenity::client::bridge::gateway::ShardMessenger::new(
+                    serenity::futures::channel::mpsc::unbounded().0,
+                ),
+                shard_id: 0,
+                http: std::sync::Arc::new(serenity::http::Http::new("")),
+                cache: std::sync::Arc::new(serenity::cache::Cache::new()),
+            },
+            source: CommandSource::Message(unsafe {
+                #[allow(invalid_value)]
+                std::mem::MaybeUninit::zeroed().assume_init()
+            }),
+            args,
+        }
+    }
 }
 
 macro_rules! arg_methods {
@@ -428,7 +450,6 @@ macro_rules! arg_methods {
     };
 }
 
-#[cfg(not(test))]
 impl CommandContext {
     arg_methods! {
         get_str_arg, String, String,
@@ -503,7 +524,7 @@ impl CommandContext {
                 i.create_interaction_response(&self.ctx, |c| {
                     c.kind(InteractionResponseType::ChannelMessageWithSource);
                     c.interaction_response_data(|n| {
-                        n.create_embed(embed);
+                        n.embed(embed);
 
                         n
                     });
@@ -585,12 +606,5 @@ impl Debug for CommandContext {
             f.write_fmt(format_args!("{}: {:?}\n", &key, &value))?;
         }
         Ok(())
-    }
-}
-
-#[cfg(test)]
-impl CommandContext {
-    pub fn new(source: CommandSource, args: HashMap<String, Argument>) -> Self {
-        CommandContext { args, source }
     }
 }

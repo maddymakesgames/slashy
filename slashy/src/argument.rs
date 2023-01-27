@@ -1,22 +1,13 @@
-use std::{
-    collections::HashMap,
-    fmt::Display,
-    hint::unreachable_unchecked,
-    iter::Peekable,
-    slice::Iter,
-};
+use std::{collections::HashMap, iter::Peekable, slice::Iter};
 
 use serenity::{
     client::Cache,
     model::{
-        id::{ChannelId, RoleId, UserId},
-        interactions::{
-            application_command::{
-                ApplicationCommandInteraction,
-                ApplicationCommandInteractionDataOption as InteractionOption,
-            },
-            Interaction,
+        application::interaction::application_command::{
+            ApplicationCommandInteraction,
+            CommandDataOption,
         },
+        id::{ChannelId, RoleId, UserId},
     },
 };
 
@@ -27,7 +18,7 @@ use crate::{
     framework::CommandSource,
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 /// Represents the argument data sent into commands
 #[allow(missing_docs)]
 pub enum Argument {
@@ -156,12 +147,10 @@ impl Argument {
             CommandSource::Interaction(interaction) =>
                 Argument::parse_interaction(interaction, tree),
             CommandSource::Message(message) => Argument::parse_message(&message.content, tree),
-            #[cfg(test)]
-            CommandSource::Test(str) => Argument::parse_message(str, tree),
         }
     }
 
-    /// Parses [InteractionOptions](InteractionOption) into Argument and gets the function pointer for the node we need to run
+    /// Parses [CommandDataOptions](CommandDataOption) into Argument and gets the function pointer for the node we need to run
     pub fn parse_interaction(
         interaction: &ApplicationCommandInteraction,
         tree: &CommandArgumentsTree,
@@ -169,7 +158,7 @@ impl Argument {
         let mut output = HashMap::new();
         let options = Self::get_arguments_from_interaction(interaction);
 
-        if options.len() == 0 || tree.children.is_none() {
+        if options.is_empty() || tree.children.is_none() {
             if tree.func.is_some() {
                 Some((output, tree.func.unwrap()))
             } else {
@@ -187,16 +176,13 @@ impl Argument {
                 tree.func,
             );
 
-            match func {
-                Some(f) => Some((output, f)),
-                None => None,
-            }
+            func.map(|f| (output, f))
         }
     }
 
     fn parse_interaction_tree(
         branch: &Vec<CommandArguments>,
-        recieved: &mut Peekable<Iter<InteractionOption>>,
+        recieved: &mut Peekable<Iter<CommandDataOption>>,
         map: &mut HashMap<String, Self>,
         func: Option<CommandFunction>,
     ) -> Option<CommandFunction> {
@@ -216,15 +202,12 @@ impl Argument {
             );
         }
 
-        match fun {
-            Some(f) => Some(f),
-            None => None,
-        }
+        fun
     }
 
     fn get_arguments_from_interaction(
         interaction: &ApplicationCommandInteraction,
-    ) -> Vec<InteractionOption> {
+    ) -> Vec<CommandDataOption> {
         let mut output = Vec::new();
 
         for option in &interaction.data.options {
@@ -234,13 +217,13 @@ impl Argument {
         output
     }
 
-    fn traverse_tree(interaction: &InteractionOption) -> Vec<InteractionOption> {
+    fn traverse_tree(interaction: &CommandDataOption) -> Vec<CommandDataOption> {
         let mut output = Vec::new();
 
         output.push(interaction.clone());
 
         for child in interaction.clone().options {
-            if child.options.len() > 0 {
+            if !child.options.is_empty() {
                 output.extend(Self::traverse_tree(&child))
             } else {
                 output.push(child);
@@ -258,7 +241,7 @@ impl Argument {
     /// let args = Argument::get_arg_strings(string);
     /// assert_eq!(args, vec!["this","is","a","string","with quotes in it"]);
     /// ```
-    pub fn get_arg_strings<'a>(str: &'a str) -> Vec<&'a str> {
+    pub fn get_arg_strings(str: &str) -> Vec<&str> {
         lazy_static::lazy_static! {
             static ref SPLITTER: Regex = Regex::new(r#""(.+)"|(?:\S)+"#).unwrap();
         };
@@ -294,15 +277,9 @@ impl Argument {
                         Some(f) => Some((args, f)),
                         None => Some((args, f)),
                     },
-                    None => match tree.func {
-                        Some(f) => Some((HashMap::new(), f)),
-                        None => None,
-                    },
+                    None => tree.func.map(|f| (HashMap::new(), f)),
                 },
-            None => match func {
-                Some(f) => Some((args, f)),
-                None => None,
-            },
+            None => func.map(|f| (args, f)),
         }
     }
 
@@ -340,12 +317,13 @@ impl Argument {
         }
     }
 
-    async fn to_string(&self, cache: &Cache) -> String {
+    /// Converts the argument to a string representation
+    pub async fn to_string(&self, cache: &Cache) -> String {
         match self {
-            Argument::Boolean(b) => format!("{}", b),
-            Argument::Channel(c) => format!("{}", c.name(cache).await.unwrap()),
-            Argument::Integer(i) => format!("{}", i),
-            Argument::Role(r) => format!("{}", r.to_role_cached(cache).await.unwrap().name),
+            Argument::Boolean(b) => format!("{b}"),
+            Argument::Channel(c) => c.name(cache).await.unwrap(),
+            Argument::Integer(i) => format!("{i}"),
+            Argument::Role(r) => r.to_role_cached(cache).unwrap().name,
             Argument::String(s) => s.clone(),
             Argument::User(u) => u.to_user_cached(cache).await.unwrap().name,
         }
@@ -377,21 +355,21 @@ fn str_parse_test() {
         futures::future::{BoxFuture, FutureExt},
         model::id::UserId,
     };
-    fn test<'fut>(_ctx: &'fut CommandContext) -> BoxFuture<'fut, CommandResult> {
+    fn test(_ctx: &CommandContext) -> BoxFuture<CommandResult> {
         async move {
             println!("test");
             Ok(())
         }
         .boxed()
     }
-    fn test2<'fut>(_ctx: &'fut CommandContext) -> BoxFuture<'fut, CommandResult> {
+    fn test2(_ctx: &CommandContext) -> BoxFuture<CommandResult> {
         async move {
             println!("test2");
             Ok(())
         }
         .boxed()
     }
-    fn test3<'fut>(_ctx: &'fut CommandContext) -> BoxFuture<'fut, CommandResult> {
+    fn test3(_ctx: &CommandContext) -> BoxFuture<CommandResult> {
         async move {
             println!("test3");
             Ok(())

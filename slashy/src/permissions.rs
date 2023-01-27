@@ -24,7 +24,7 @@ pub async fn ADMINISTRATOR(
     member: &Member,
     _channel: &GuildChannel,
 ) -> CommandResult<bool> {
-    Ok(member.permissions(ctx).await?.administrator())
+    Ok(member.permissions(ctx)?.administrator())
 }
 
 /// Permission check that passes if the member has the manage messages permission either globaly or in the channel
@@ -35,9 +35,8 @@ pub async fn MANNAGE_MESSAGES(
     member: &Member,
     channel: &GuildChannel,
 ) -> CommandResult<bool> {
-    Ok(member.permissions(ctx).await?.manage_messages()
+    Ok(member.permissions(ctx)?.manage_messages()
         || channel
-            .permissions_for_user(ctx, member.user.id)
-            .await?
+            .permissions_for_user(ctx, member.user.id)?
             .manage_messages())
 }
