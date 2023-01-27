@@ -289,10 +289,10 @@ impl Argument {
         map: &mut HashMap<String, Self>,
         func: Option<CommandFunction>,
     ) -> Option<CommandFunction> {
-        let mut func = func;
+        let mut end_func = func;
         for argument in branch {
             arg_message!(
-                str_args, branch, map, func, argument,
+                str_args, branch, map, end_func, argument,
                 String, String, parse_string;
                 Integer, Integer, parse_int;
                 Boolean, Bool, parse_bool;
@@ -303,7 +303,7 @@ impl Argument {
             )
         }
 
-        func
+        end_func
     }
 
     fn parse_string(string: &str) -> Result<Self, ()> {
