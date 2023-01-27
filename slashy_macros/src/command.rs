@@ -105,7 +105,7 @@ impl ToTokens for CommandInput {
             None => quote! {None},
         };
         let struct_name = format_ident!("{}_COMMAND", name.to_string().to_uppercase());
-        let cmd_name = format!("{}", name);
+        let cmd_name = format!("{name}");
         tokens.append_all(quote! {
             use ::slashy::commands::{Command, CommandArguments, ArgumentChoice, CommandArgumentsTree};
             use ::slashy::framework::CommandInit;

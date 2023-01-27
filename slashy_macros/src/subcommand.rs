@@ -56,7 +56,7 @@ pub fn format_subcommand(func: SubCommandFunc, args: SubCommandArgs) -> Result<T
         return Err(Error::new(ctx_input.span(), "Expected CommandContext"));
     };
 
-    let permmissions_runner = if perms.len() > 0 {
+    let permmissions_runner = if !perms.is_empty() {
         quote! {
             #[cfg(not(test))]
             {
