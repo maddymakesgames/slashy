@@ -317,8 +317,8 @@ impl Argument {
         }
     }
 
-    /// Converts the argument to a string representation
-    pub async fn to_string(&self, cache: &Cache) -> String {
+    /// Converts the argument to a string representation, converting ids to names
+    pub async fn to_pretty_string(&self, cache: &Cache) -> String {
         match self {
             Argument::Boolean(b) => format!("{b}"),
             Argument::Channel(c) => c.name(cache).await.unwrap(),
@@ -326,6 +326,19 @@ impl Argument {
             Argument::Role(r) => r.to_role_cached(cache).unwrap().name,
             Argument::String(s) => s.clone(),
             Argument::User(u) => u.to_user_cached(cache).await.unwrap().name,
+        }
+    }
+}
+
+impl ToString for Argument {
+    fn to_string(&self) -> String {
+        match self {
+            Argument::Boolean(b) => format!("{b}"),
+            Argument::Channel(c) => format!("{c}"),
+            Argument::Integer(i) => format!("{i}"),
+            Argument::Role(r) => format!("{r}"),
+            Argument::String(s) => s.clone(),
+            Argument::User(u) => format!("{u}"),
         }
     }
 }
