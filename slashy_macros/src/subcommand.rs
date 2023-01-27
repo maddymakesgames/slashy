@@ -1,10 +1,11 @@
-use proc_macro2::{Ident, Span};
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::{
     ext::IdentExt,
     parse::Parse,
     punctuated::Punctuated,
     spanned::Spanned,
+    Error,
     FnArg,
     ItemFn,
     Lifetime,
@@ -13,7 +14,7 @@ use syn::{
     Type,
 };
 
-pub fn format_subcommand(func: SubCommandFunc, args: SubCommandArgs) -> proc_macro::TokenStream {
+pub fn format_subcommand(func: SubCommandFunc, args: SubCommandArgs) -> Result<TokenStream, Error> {
     let perms = match args.perms_checks {
         Some(p) => p,
         None => Punctuated::default(),
@@ -52,12 +53,7 @@ pub fn format_subcommand(func: SubCommandFunc, args: SubCommandArgs) -> proc_mac
     let ctx_input = if let FnArg::Typed(t) = ctx_input {
         t.pat
     } else {
-        ctx_input
-            .span()
-            .unwrap()
-            .error("Expected CommandContext")
-            .emit();
-        unreachable!();
+        return Err(Error::new(ctx_input.span(), "Expected CommandContext"));
     };
 
     let permmissions_runner = if perms.len() > 0 {
@@ -97,7 +93,7 @@ pub fn format_subcommand(func: SubCommandFunc, args: SubCommandArgs) -> proc_mac
     };
 
 
-    let token_stream = quote! {
+    Ok(quote! {
         #(#attrs)*
         #vis fn #name<'fut>(#(#input),*) -> ::serenity::futures::future::BoxFuture<'fut, #return_ty> {
             use ::serenity::futures::future::FutureExt;
@@ -107,9 +103,7 @@ pub fn format_subcommand(func: SubCommandFunc, args: SubCommandArgs) -> proc_mac
             }
             .boxed()
         }
-    }.into();
-
-    token_stream
+    })
 }
 
 

@@ -1,4 +1,4 @@
-#![feature(proc_macro_diagnostic)]
+// #![feature(proc_macro_diagnostic)]
 
 use proc_macro2::Span;
 use quote::{quote, ToTokens};
@@ -73,5 +73,8 @@ pub fn subcommand(
 ) -> proc_macro::TokenStream {
     let args = parse_macro_input!(attr as SubCommandArgs);
     let func = parse_macro_input!(item as SubCommandFunc);
-    format_subcommand(func, args)
+    match format_subcommand(func, args) {
+        Ok(t) => t.into(),
+        Err(e) => e.to_compile_error().into(),
+    }
 }

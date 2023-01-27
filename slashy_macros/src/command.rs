@@ -8,6 +8,7 @@ use syn::{
     punctuated::Punctuated,
     spanned::Spanned,
     token::{Brace, Bracket, Comma},
+    Error,
     Ident,
     Token,
 };
@@ -63,10 +64,10 @@ impl Parse for CommandInput {
                 match child.required {
                     Required::Required(r) =>
                         if optional {
-                            r.span()
-                                .unwrap()
-                                .error("Cannot have required argument after optional")
-                                .emit();
+                            return Err(Error::new(
+                                r.span(),
+                                "Cannot have required argument after optional argument",
+                            ));
                         },
                     Required::Optional(_) => {
                         optional = true;
@@ -222,10 +223,10 @@ impl Parse for Argument {
                 match child.required {
                     Required::Required(r) =>
                         if optional {
-                            r.span()
-                                .unwrap()
-                                .error("Cannot have required argument after optional")
-                                .emit();
+                            return Err(Error::new(
+                                r.span(),
+                                "Cannot have required argument after optional argument",
+                            ));
                         },
                     Required::Optional(_) => {
                         optional = true;
