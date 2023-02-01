@@ -2,14 +2,14 @@
 pub mod test {
     use std::collections::HashMap;
 
-    use crate::{
+    use slashy::{
         commands::CommandResult,
         framework::CommandContext,
         permissions::PermsResult,
         permissions_check,
+        serenity::FutureExt,
         subcommand,
     };
-    use serenity::FutureExt;
 
     #[test]
     fn subcommand() {

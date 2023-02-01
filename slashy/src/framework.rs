@@ -404,8 +404,7 @@ pub struct CommandContext {
     source: CommandSource,
     args: HashMap<String, Argument>,
 }
-
-#[cfg(test)]
+// TODO: Figure out why this can't be #[cfg(test)]
 impl CommandContext {
     /// A method to create a CommandContext inside of tests
     ///

@@ -13,8 +13,6 @@ pub mod framework;
 pub mod permissions;
 /// The settings for the framework.
 pub mod settings;
-#[cfg(test)]
-mod tests;
 
 /// Macro to create commands.
 ///
