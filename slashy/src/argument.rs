@@ -266,7 +266,15 @@ impl Argument {
         tree: &CommandArgumentsTree,
     ) -> Option<(HashMap<String, Self>, CommandFunction)> {
         let func = tree.func;
-        let str_args = Self::get_arg_strings(&content[content.find(' ').unwrap_or(0) ..]);
+
+        // If there is no space than we only have the command trigger
+        // Thus we don't want to attempt to parse any arguments from it
+        let str_args = if content.contains(' ') {
+            Self::get_arg_strings(&content[content.find(' ').unwrap() ..])
+        } else {
+            Vec::new()
+        };
+
         let mut str_args_iter = str_args.iter().peekable();
         let mut args = HashMap::new();
 
