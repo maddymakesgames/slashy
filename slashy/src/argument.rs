@@ -84,7 +84,9 @@ macro_rules! arg_message {
                 }
 
                 if parsed.is_ok() {
-                    $map.insert(name.to_string(), Self::$parser($str_args.next().unwrap()).unwrap());
+                    if let Some(str_arg) = $str_args.next() {
+                        $map.insert(name.to_string(), Self::$parser(str_arg).unwrap());
+                    }
                 }
             },)*
             $(CommandArguments::$sub_command_type {name, required, func, options, ..} => {
