@@ -1,8 +1,8 @@
 [package]
 name = "slashy"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["maddymakesgames <madelinemakesgames@gmail.com>"]
-edition = "2018"
+edition = "2021"
 readme = "../README.md"
 repository = "https://github.com/maddymakesgames/slashy"
 homepage = "https://github.com/maddymakesgames/slashy"
@@ -13,7 +13,7 @@ keywords = ["discord", "serenity"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-slashy_macros = {version = "0.1.0", path = "../slashy_macros"}
+slashy_macros = {version = "0.1.2", path = "../slashy_macros"}
 
 serenity = { version = "0.11", default-features = false, features = ["builder", "cache", "client", "gateway", "http", "model", "utils"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
