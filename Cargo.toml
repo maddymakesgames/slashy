@@ -2,5 +2,6 @@
 resolver = "2"
 members = [
     "slashy",
-    "slashy_macros"
+    "slashy_macros",
+    "example_bot"
 ]

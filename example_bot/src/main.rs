@@ -1,12 +1,3 @@
-# Slashy
-
-This is a wip command frame work for [Serenity](https://github.com/serenity-rs/serenity) that allows commands to be registered for both normal text commands and Discord's new [slash commands](https://discord.com/developers/docs/interactions/slash-commands)
-
-Instead of taking Serenity's attribute style of command registering, we register commands via a tree of possible arguments with different subcommands being executed at different branches.
-
-
-### Basic Command
-```rust
 use slashy::{
     command,
     commands::CommandResult,
@@ -65,5 +56,3 @@ async fn main() {
         println!("An error occurred while running the client: {why:?}");
     }
 }
-
-```
