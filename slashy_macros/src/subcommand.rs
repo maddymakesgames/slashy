@@ -60,7 +60,7 @@ pub fn format_subcommand(func: SubCommandFunc, args: SubCommandArgs) -> Result<T
         quote! {
             #[cfg(not(test))]
             {
-                use ::serenity::model::channel::Channel;
+                use ::slashy::serenity::model::channel::Channel;
                 use ::std::error::Error;
                 let member = #ctx_input.member().await?;
                 match #ctx_input.channel().await? {
@@ -84,7 +84,7 @@ pub fn format_subcommand(func: SubCommandFunc, args: SubCommandArgs) -> Result<T
                 if #(#perms().await?)&&* {
                     #block
                 } else {
-                    Err(Box::new(crate::commands::SlashyError::new("User does not have permissions")) as Box<dyn Error + Sync + std::marker::Send + 'static>)
+                    Err(Box::new(::slashy::commands::SlashyError::new("User does not have permissions")) as Box<dyn Error + Sync + std::marker::Send + 'static>)
                 }
             }
         }
@@ -95,8 +95,8 @@ pub fn format_subcommand(func: SubCommandFunc, args: SubCommandArgs) -> Result<T
 
     Ok(quote! {
         #(#attrs)*
-        #vis fn #name<'fut>(#(#input),*) -> ::serenity::futures::future::BoxFuture<'fut, #return_ty> {
-            use ::serenity::futures::future::FutureExt;
+        #vis fn #name<'fut>(#(#input),*) -> ::slashy::serenity::futures::future::BoxFuture<'fut, #return_ty> {
+            use ::slashy::serenity::futures::future::FutureExt;
             async move {
 
                 #permmissions_runner
